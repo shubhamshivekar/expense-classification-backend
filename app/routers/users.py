@@ -4,16 +4,25 @@ from app.auth import hash_password, verify_password, create_access_token, admin_
 from datetime import datetime
 from bson import ObjectId
 
+from app.schemas import loginSchema, UserSchema
+
 router = APIRouter()
 
+@router.get("/all", dependencies=[Depends(admin_required)])
+async def get_all_users():
+    users = await users_collection.find({}, {"password": 0}).to_list(length=None)  # Exclude password field
+    for user in users:
+        user["_id"] = str(user["_id"])
+    return users
+
 @router.post("/register")
-async def register(email: str, password: str):
-    if await users_collection.find_one({"email": email}):
+async def register(data: loginSchema):
+    if await users_collection.find_one({"email": data.email}):
         raise HTTPException(400, "User already exists")
 
     await users_collection.insert_one({
-        "email": email,
-        "password": hash_password(password),
+        "email": data.email,
+        "password": hash_password(data.password),
         "role": "user",
         "created_at": datetime.utcnow()
     })
@@ -21,15 +30,15 @@ async def register(email: str, password: str):
 
 
 @router.post("/login")
-async def login(email: str, password: str):
-    user = await users_collection.find_one({"email": email})
-    if not user or not verify_password(password, user["password"]):
+async def login(data: loginSchema):
+    user = await users_collection.find_one({"email": data.email})
+    if not user or not verify_password(data.password, user["password"]):
         raise HTTPException(401, "Invalid credentials")
 
-    token = create_access_token({"user_id": str(user["_id"])})
+    token = create_access_token(user)
     return {"access_token": token}
 
-@router.put("/users/{user_id}/role")
+@router.put("/users/{user_}/role")
 async def update_user_role(
     user_id: str,
     role: str,

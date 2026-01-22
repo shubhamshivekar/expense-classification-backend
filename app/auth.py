@@ -4,6 +4,8 @@ from datetime import datetime, timedelta
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
+from app.schemas import UserSchema
+
 # ================= CONFIG =================
 
 SECRET_KEY = "SECRET_KEY"   # move to env in real prod
@@ -16,16 +18,19 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # ================= PASSWORD =================
 
-def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+def hash_password(password: str):
+    password_bytes = password.encode("utf-8")
+    return pwd_context.hash(password_bytes.decode("utf-8"))
 
 def verify_password(password: str, hashed: str) -> bool:
     return pwd_context.verify(password, hashed)
-
 # ================= JWT =================
 
 def create_access_token(data: dict) -> str:
-    to_encode = data.copy()
+    to_encode =  {
+        "user_id": str(data["_id"]),
+        "role": data["role"]
+    }
     expire = datetime.utcnow() + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)

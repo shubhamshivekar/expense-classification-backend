@@ -2,9 +2,13 @@ from pydantic import BaseModel, EmailStr
 from datetime import datetime, date
 
 class UserSchema(BaseModel):
+    role:str
     email: EmailStr
     created_at: datetime
-    
+
+class loginSchema(BaseModel):
+    email: EmailStr
+    password: str
 
 class UploadSchema(BaseModel):
     filename: str
